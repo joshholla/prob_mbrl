@@ -9,11 +9,11 @@ from prob_mbrl import utils, models, envs
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Policy evaluation script")
-    parser.add_argument('--load_from', type=str, default=None)
+    parser.add_argument('--path', type=str, default=None)
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--n_evals', type=int, default=10)
     args = parser.parse_args()
-    loaded_from = args.load_from
+    loaded_from = args.path
     render_fn = (lambda *args, **kwargs: env.render()) if args.render else None
     n_evals = args.n_evals
     args = torch.load(os.path.join(loaded_from, 'args.pth.tar'))
@@ -84,7 +84,20 @@ if __name__ == "__main__":
         trajectories.append(trajs)
         cummulative_experience.append(total_experience)
     # after the evaluations are done, you can use trajs to plot stuff.
-    # for example
+
+    torch.save(trajectories, os.path.join(loaded_from , 'evaluation_trajectories.pth.tar'))
+    torch.save(cummulative_experience, os.path.join(loaded_from , 'evaluation_cumulative.pth.tar'))
     all_rewards = [[np.sum(tr[2]) for tr in evals] for evals in trajectories]
-    plt.plot(cummulative_experience, all_rewards)
+    # import ipdb; ipdb.set_trace()
+    fig = plt.figure(figsize=(12,8))
+    avg_rewards = [np.average(rew) for rew in all_rewards]
+    stdev = [np.std(rew) for rew in all_rewards]
+    plt.plot(cummulative_experience, avg_rewards)
+    upper = avg_rewards + (np.divide(stdev,2))
+    lower = avg_rewards - (np.divide(stdev,2))
+    plt.fill_between(cummulative_experience, upper, lower, interpolate=True, alpha=0.3)
+    fig.subplots_adjust(bottom=0.2)
+    fig.subplots_adjust(left=0.2)
+    save_name = loaded_from
+    fig.savefig('{}Results.png'.format(save_name))
     plt.show()
